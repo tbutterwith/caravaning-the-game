@@ -1,0 +1,53 @@
+@font-face {
+  font-family: 'PressStart';
+  src: url('../shared/assets/PressStart2P-Regular.ttf');
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'PressStart';
+  background-color: #306082;
+
+  margin: 0;
+  padding: 0;
+}
+
+p {
+  margin: 4rem 0;
+}
+
+p:last-of-type {
+  margin-bottom: 1rem; 
+}
+
+#page-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+
+  justify-content: center;
+}
+
+#content {
+  max-width: 700px;
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 4rem;
+}
+
+.centered {
+  width: 100%;
+  text-align: center;
+}
+
+.footer {
+  text-align: center;
+  margin-bottom: 1rem;
+}
