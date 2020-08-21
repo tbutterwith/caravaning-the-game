@@ -8,9 +8,13 @@ const gameConfig = {
 	parent: "content",
   title: "Caravaning: The Game",
   physics: {
-    default: 'arcade',
-    arcade: {
-        debug: true,
+    default: 'matter',
+    matter: {
+      gravity: {
+        x: 0,
+        y: 0
+      },
+      debug: true,
     }
   }
 };
