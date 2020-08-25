@@ -15,25 +15,43 @@ const calculateVelocity = (angle, distance) => {
   return {x, y};
 }
 
+const DIRECTION = {
+  LEFT: -1,
+  RIGHT: 1,
+  BACK: 1,
+  FORWARD: -1,
+};
+
+const getWheelAngle = (angle, maxAngle, direction) => {
+  const newWheelAngle = angle + (1 * direction);
+  return Math.abs(newWheelAngle) <= maxAngle ? newWheelAngle : (maxAngle * direction);
+}
+
+const moveVehicle = (vehicle, wheelAngle, speed, direction) => {
+  const vehicleSpeed = speed * direction;
+  const vehicleAngle = vehicle.angle + (wheelAngle/10);
+
+  vehicle.setAngle(vehicleAngle);
+
+  const { x, y } = calculateVelocity(vehicleAngle, vehicleSpeed);
+  vehicle.setVelocityY(y);
+  vehicle.setVelocityX(x);
+}
+
 export default class Parking extends Phaser.Scene {
   /**
 	 * Unique name of the scene.
 	 */
   static Name = "CaravanParking";
   
-  static carConfig = {
+  carConfig = {
     speed: 3,
+    wheelAngle: 0,
+    maxWheelAngle: 15,
   };
 
-  static caravanConfig = {
+  caravanConfig = {
     speed: 1,
-  }
-
-  activeVehicle = {
-    attached: true,
-    name: '',
-    vehicle: null,
-    config: null,
   }
 
 	preload() {
@@ -90,34 +108,34 @@ export default class Parking extends Phaser.Scene {
   }
 
   update() {
-    const { vehicle, config } = this.activeVehicle;
+    this.handleCarMotion();
+  }
+
+
+  handleCarMotion() {
+    const vehicle = this.car;
+    const config = this.carConfig;
+
+    // TODO towing dynamics
 
     vehicle.setVelocity(0);
 
     if (this.cursors.left.isDown)
     {
-      vehicle.setAngle(vehicle.angle - 1);
+      config.wheelAngle = getWheelAngle(config.wheelAngle, config.maxWheelAngle, DIRECTION.LEFT);
     }
     else if (this.cursors.right.isDown)
     {
-      vehicle.setAngle(vehicle.angle + 1);
+      config.wheelAngle = getWheelAngle(config.wheelAngle, config.maxWheelAngle, DIRECTION.RIGHT);
     }
     
     if (this.cursors.up.isDown)
     {
-      const speed = -config.speed;
-
-      const { x, y } = calculateVelocity(vehicle.angle, speed);
-      vehicle.setVelocityY(y);
-      vehicle.setVelocityX(x);
+      moveVehicle(vehicle, config.wheelAngle, config.speed, DIRECTION.FORWARD);
     }
     else if (this.cursors.down.isDown)
     {
-      const speed = config.speed;
-
-      const { x, y } = calculateVelocity(vehicle.angle, speed);
-      vehicle.setVelocityY(y);
-      vehicle.setVelocityX(x);
+      moveVehicle(vehicle, config.wheelAngle, config.speed, DIRECTION.BACK);
     }
   }
 
@@ -132,13 +150,13 @@ export default class Parking extends Phaser.Scene {
         self.activeVehicle = {
           name: 'caravan',
           vehicle: self.caravan,
-          config: Parking.caravanConfig,
+          config: self.caravanConfig,
         }
       } else {
         self.activeVehicle = {
           name: 'car',
           vehicle: self.car,
-          config: Parking.carConfig,
+          config: self.carConfig,
         };
       }
 
