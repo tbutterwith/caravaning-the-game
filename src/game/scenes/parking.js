@@ -4,7 +4,6 @@ import colours from '../../shared/assets/colours'
 import caravanSprite from '../../game/assets/caravan_above.png'
 import carSprite from '../../game/assets/car_above.png'
 import bushSprite from '../../game/assets/bush.png';
-import CarvaningGame from "..";
 
 const calculateVelocity = (angle, distance) => {
   const radians = (angle + 90) * (Math.PI/180);
@@ -18,8 +17,8 @@ const calculateVelocity = (angle, distance) => {
 const DIRECTION = {
   LEFT: -1,
   RIGHT: 1,
-  BACK: 1,
-  FORWARD: -1,
+  BACK: -1,
+  FORWARD: 1,
 };
 
 const getWheelAngle = (angle, maxAngle, direction) => {
@@ -27,15 +26,16 @@ const getWheelAngle = (angle, maxAngle, direction) => {
   return Math.abs(newWheelAngle) <= maxAngle ? newWheelAngle : (maxAngle * direction);
 }
 
-const moveVehicle = (vehicle, wheelAngle, speed, direction) => {
-  const vehicleSpeed = speed * direction;
-  const vehicleAngle = vehicle.angle + (wheelAngle/10);
+const moveCar = (car, wheelAngle, speed, direction) => {
+  // direction is inverted due to sprite placement
+  const vehicleSpeed = speed * -direction;
+  const vehicleAngle = car.angle + (wheelAngle/10) * direction; 
 
-  vehicle.setAngle(vehicleAngle);
+  car.setAngle(vehicleAngle);
 
   const { x, y } = calculateVelocity(vehicleAngle, vehicleSpeed);
-  vehicle.setVelocityY(y);
-  vehicle.setVelocityX(x);
+  car.setVelocityY(y);
+  car.setVelocityX(x);
 }
 
 export default class Parking extends Phaser.Scene {
@@ -49,6 +49,8 @@ export default class Parking extends Phaser.Scene {
     wheelAngle: 0,
     maxWheelAngle: 15,
   };
+
+  isTowing = true;
 
   caravanConfig = {
     speed: 1,
@@ -68,6 +70,17 @@ export default class Parking extends Phaser.Scene {
     this.matter.world.setBounds(0, 0, 800, 600);
 
     this.bindKeyPresses();
+
+    this.towingConstraint = Phaser.Physics.Matter.Matter.Constraint.create({
+          bodyA: this.car.body,
+          pointA: {x: 40, y: 0},
+          bodyB: this.caravan.body,
+          pointB: {x: -60, y: 0},
+          length: 1,
+          stiffness: 1
+      });
+
+    this.matter.world.add(this.towingConstraint);
   }
   
   drawScene() {
@@ -131,11 +144,25 @@ export default class Parking extends Phaser.Scene {
     
     if (this.cursors.up.isDown)
     {
-      moveVehicle(vehicle, config.wheelAngle, config.speed, DIRECTION.FORWARD);
+      moveCar(vehicle, config.wheelAngle, config.speed, DIRECTION.FORWARD);
+      /*
+        This doesn't really work.
+        What about something that keeps tabs on how far forward you've moved, and 
+        adds angle based on that? The angle of the caravan should be 10-20 degrees
+        behind that of the car (I think)
+      */
+      if(this.isTowing) {
+        const newAngle = this.car.angle + (config.wheelAngle/10) * DIRECTION.FORWARD;
+        this.caravan.setAngle(newAngle);
+      }
     }
     else if (this.cursors.down.isDown)
     {
-      moveVehicle(vehicle, config.wheelAngle, config.speed, DIRECTION.BACK);
+      moveCar(vehicle, config.wheelAngle, config.speed, DIRECTION.BACK);
+      if(this.isTowing) {
+        const newAngle = this.car.angle + (config.wheelAngle/10) * DIRECTION.BACK;
+        this.caravan.setAngle(newAngle);
+      }
     }
   }
 
@@ -146,19 +173,13 @@ export default class Parking extends Phaser.Scene {
 
     spaceKey.on('up', function (key, event) {
       event.stopPropagation();
-      if(self.activeVehicle.name === 'car') {
-        self.activeVehicle = {
-          name: 'caravan',
-          vehicle: self.caravan,
-          config: self.caravanConfig,
-        }
+      if (self.isTowing) {
+        self.matter.world.remove(self.towingConstraint);
       } else {
-        self.activeVehicle = {
-          name: 'car',
-          vehicle: self.car,
-          config: self.carConfig,
-        };
+        // if the car is near the caravan - attach
+        self.matter.world.add(self.towingConstraint);
       }
+      self.isTowing = !self.isTowing;
 
     });
   }
